@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Docentes - IPSD UNAH</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- SheetJS (xlsx) para leer y exportar Excel -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- html2canvas para exportar el Dashboard como Imagen PNG -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <!-- jsPDF y AutoTable para exportar el Dashboard y la Tabla a PDF -->
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    /* Tipografía Institucional UNAH: Helvetica Neue */
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f1f5f9; }
+    .chart-container { position: relative; height: 260px; width: 100%; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #003366; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #FFC000; }
+  </style>
+</head>
+<body class="text-slate-800">
+
+  <!-- ENCABEZADO SUPERIOR Y CARGA DE ARCHIVOS (Azul Institucional UNAH) -->
+  <header class="bg-[#003366] text-white shadow-lg sticky top-0 z-30 border-b-4 border-[#FFC000]">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div class="flex items-center gap-4">
+        <!-- Logotipo UNAH IPSD versión blanca transparente -->
+        <img src="quality_restoration_20260930150829743.png" alt="UNAH IPSD" class="h-12 md:h-16 object-contain">
+        <div>
+          <h1 class="text-xl md:text-2xl font-bold tracking-tight">Dashboard Docentes</h1>
+          <p class="text-[#FFC000] text-xs md:text-sm mt-1 font-medium" id="loadedFilesInfo">
+            Sin archivos cargados — Sube uno o varios archivos Excel
+          </p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <!-- Subir 1 o Varios Excel / CSV (Amarillo Institucional) -->
+        <label class="cursor-pointer bg-[#FFC000] hover:bg-[#e6ac00] text-[#003366] text-xs md:text-sm font-bold px-3.5 py-2 rounded-lg shadow transition flex items-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+          <span>Subir Excel</span>
+          <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" multiple class="hidden" />
+        </label>
+
+        <!-- Sumar más archivos -->
+        <label class="cursor-pointer bg-white hover:bg-gray-100 text-[#003366] text-xs md:text-sm font-bold px-3.5 py-2 rounded-lg shadow transition flex items-center gap-1.5 border border-slate-200">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+          <span>Sumar otro</span>
+          <input type="file" id="appendFileInput" accept=".xlsx,.xls,.csv" multiple class="hidden" />
+        </label>
+
+        <!-- Exportar Dashboard como Imagen PNG -->
+        <button onclick="exportDashboardAsImage()" class="bg-[#0055A4] hover:bg-[#004080] text-white text-xs md:text-sm font-medium px-3.5 py-2 rounded-lg shadow transition flex items-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <span>Imagen</span>
+        </button>
+
+        <!-- Exportar Dashboard a PDF -->
+        <button onclick="exportDashboardAsPDF()" class="bg-[#0055A4] hover:bg-[#004080] text-white text-xs md:text-sm font-medium px-3.5 py-2 rounded-lg shadow transition flex items-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+          <span>PDF</span>
+        </button>
+
+        <!-- Limpiar Filtros -->
+        <button onclick="resetFilters()" class="bg-rose-600 hover:bg-rose-500 text-white text-xs md:text-sm font-medium px-3 py-2 rounded-lg transition">
+          Restablecer
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+
+    <!-- PANEL DE FILTROS EN CASCADA -->
+    <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 border-l-4 border-l-[#003366]">
+      <div class="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-2">
+        <h2 class="text-sm font-bold uppercase tracking-wider text-[#003366] flex items-center gap-2">
+          <svg class="w-4 h-4 text-[#FFC000]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+          Filtros Jerárquicos en Cascada y Sub-filtros
+        </h2>
+        <span id="activeFilterBadge" class="text-xs bg-blue-50 text-[#003366] font-medium px-3 py-1 rounded-full border border-blue-200">
+          Mostrando: 0 registros
+        </span>
+      </div>
+
+      <!-- Fila 1: Filtro de Vista y los 5 Apartados Organizacionales -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-3">
+        <!-- FILTRO DE VISTA -->
+        <div>
+          <label class="block text-xs font-extrabold text-[#003366] mb-1">1. Tipo de Vista</label>
+          <select id="filterViewMode" onchange="onViewModeChange()" class="w-full rounded-lg border-2 border-[#003366] bg-blue-50/50 px-3 py-2 text-sm font-bold text-[#003366] focus:border-[#FFC000] focus:outline-none transition">
+            <option value="general">Dato General (Cupos)</option>
+            <option value="unico">Dato Único (Docentes)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">2. Dirección</label>
+          <select id="filterDireccion" onchange="onCascadeChange()" class="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm focus:border-[#003366] focus:outline-none"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">3. Centro Regional</label>
+          <select id="filterCentro" onchange="onCascadeChange()" class="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm focus:border-[#003366] focus:outline-none"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">4. Facultad</label>
+          <select id="filterFacultad" onchange="onCascadeChange()" class="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm focus:border-[#003366] focus:outline-none"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-[#003366] mb-1">5. Carrera</label>
+          <select id="filterCarrera" onchange="onCascadeChange()" class="w-full rounded-lg border-2 border-[#FFC000] bg-yellow-50/40 px-3 py-2 text-sm font-medium focus:border-[#003366] focus:outline-none"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">6. Departamento</label>
+          <select id="filterDepartamento" onchange="onCascadeChange()" class="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm focus:border-[#003366] focus:outline-none"></select>
+        </div>
+      </div>
+
+      <!-- Fila 2: Sub-filtros y Buscador -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 pt-3 border-t border-slate-100">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Acción Formativa</label>
+          <select id="filterAccion" onchange="onCascadeChange()" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Tipo de Contratación</label>
+          <select id="filterContrato" onchange="onCascadeChange()" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Jornada Laboral</label>
+          <select id="filterJornada" onchange="onCascadeChange()" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Género</label>
+          <select id="filterGenero" onchange="onCascadeChange()" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Fecha / Mes</label>
+          <select id="filterFecha" onchange="onCascadeChange()" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-[#003366] mb-1">Buscar Docente / N° Empleado</label>
+          <input type="text" id="searchInput" oninput="updateDashboard()" placeholder="Nombre, N° empleado, correo..." class="w-full rounded-lg border-2 border-[#003366] px-3 py-1.5 text-sm focus:border-[#FFC000] focus:outline-none" />
+        </div>
+      </div>
+    </section>
+
+    <!-- ZONA CAPTURABLE PARA EXPORTAR DASHBOARD A IMAGEN Y PDF -->
+    <div id="dashboardCaptureArea" class="space-y-6 bg-slate-100 p-1 rounded-xl">
+
+      <!-- TARJETAS SUPERIORES -->
+      <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3.5">
+        <div class="bg-white p-4 rounded-xl shadow-sm border-t-4 border-[#003366]">
+          <p class="text-[11px] font-bold uppercase text-slate-400">Total Participaciones</p>
+          <div class="flex items-baseline justify-between mt-1.5">
+            <h3 id="kpiParticipaciones" class="text-2xl font-extrabold text-[#003366]">0</h3>
+            <span class="text-[11px] font-bold bg-blue-50 text-[#003366] px-2 py-0.5 rounded-full">Cupos</span>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-1">Total en selección</p>
+        </div>
+
+        <div class="bg-white p-4 rounded-xl shadow-sm border-t-4 border-[#FFC000]">
+          <p class="text-[11px] font-bold uppercase text-slate-400">Total Docentes</p>
+          <div class="flex items-baseline justify-between mt-1.5">
+            <h3 id="kpiUnicos" class="text-2xl font-extrabold text-[#003366]">0</h3>
+            <span id="kpiPromedioTalleres" class="text-[11px] font-bold text-[#FFC000] bg-yellow-50 px-2 py-0.5 rounded-full">0 cap./doc</span>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-1">Sin repetir ID</p>
+        </div>
+
+        <div class="bg-white p-4 rounded-xl shadow-sm border-t-4 border-pink-500">
+          <p class="text-[11px] font-bold uppercase text-pink-600">Femenino</p>
+          <div class="flex items-baseline justify-between mt-1.5">
+            <h3 id="kpiFemenino" class="text-2xl font-extrabold text-slate-800">0</h3>
+            <span id="kpiFemeninoPct" class="text-[11px] font-bold bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full">0%</span>
+          </div>
+          <p id="kpiFemeninoUnicas" class="text-[11px] text-slate-500 mt-1">0 únicas</p>
+        </div>
+
+        <div class="bg-white p-4 rounded-xl shadow-sm border-t-4 border-sky-500">
+          <p class="text-[11px] font-bold uppercase text-sky-600">Masculino</p>
+          <div class="flex items-baseline justify-between mt-1.5">
+            <h3 id="kpiMasculino" class="text-2xl font-extrabold text-slate-800">0</h3>
+            <span id="kpiMasculinoPct" class="text-[11px] font-bold bg-sky-100 text-sky-700 px-2 py-0.5 rounded-full">0%</span>
+          </div>
+          <p id="kpiMasculinoUnicos" class="text-[11px] text-slate-500 mt-1">0 únicos</p>
+        </div>
+
+        <div class="bg-white p-4 rounded-xl shadow-sm border-t-4 border-[#0055A4]">
+          <p class="text-[11px] font-bold uppercase text-slate-400">Acciones Formativas</p>
+          <div class="flex items-baseline justify-between mt-1.5">
+            <h3 id="kpiTalleres" class="text-2xl font-extrabold text-slate-800">0</h3>
+            <span id="kpiCarrerasCount" class="text-[11px] font-semibold text-[#0055A4] bg-blue-50 px-2 py-0.5 rounded">0 carreras</span>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-1">Talleres activos</p>
+        </div>
+
+        <div class="bg-white p-4 rounded-xl shadow-sm border-t-4 border-emerald-500">
+          <p class="text-[11px] font-bold uppercase text-slate-400">Horas Acumuladas</p>
+          <div class="flex items-baseline justify-between mt-1.5">
+            <h3 id="kpiHoras" class="text-2xl font-extrabold text-slate-800">0</h3>
+            <span id="kpiPromedioHoras" class="text-[11px] font-semibold text-emerald-600">0 h / doc.</span>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-1">Suma total</p>
+        </div>
+      </section>
+
+      <!-- GRÁFICOS INTERACTIVOS -->
+      <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+          <div class="flex justify-between items-center mb-2">
+            <h3 class="text-sm font-bold text-[#003366]" id="titleChart1">1. Dirección</h3>
+            <span class="text-[11px] text-slate-400">Clic para filtrar</span>
+          </div>
+          <div class="chart-container"><canvas id="chartDireccion"></canvas></div>
+        </div>
+
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+          <div class="flex justify-between items-center mb-2">
+            <h3 class="text-sm font-bold text-[#003366]" id="titleChart2">2. Centro Regional</h3>
+            <span class="text-[11px] text-slate-400">Clic en barra</span>
+          </div>
+          <div class="chart-container"><canvas id="chartCentro"></canvas></div>
+        </div>
+
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+          <div class="flex justify-between items-center mb-2">
+            <h3 class="text-sm font-bold text-[#003366]" id="titleChart3">3. Facultad</h3>
+            <span class="text-[11px] text-slate-400">Clic en barra</span>
+          </div>
+          <div class="chart-container"><canvas id="chartFacultad"></canvas></div>
+        </div>
+
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+          <div class="flex justify-between items-center mb-2">
+            <h3 class="text-sm font-bold text-[#003366]" id="titleChart4">4. Carrera</h3>
+            <span class="text-[11px] text-slate-400">Clic en barra</span>
+          </div>
+          <div class="chart-container"><canvas id="chartCarrera"></canvas></div>
+        </div>
+
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+          <div class="flex justify-between items-center mb-2">
+            <h3 class="text-sm font-bold text-[#003366]" id="titleChart5">5. Departamento</h3>
+            <span class="text-[11px] text-slate-400">Clic en barra</span>
+          </div>
+          <div class="chart-container"><canvas id="chartDepartamento"></canvas></div>
+        </div>
+
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+          <div class="flex justify-between items-center mb-2">
+            <h3 class="text-sm font-bold text-[#003366]" id="titleChart6">6. Tipo de Contratación</h3>
+            <span class="text-[11px] text-slate-400">Clic para filtrar</span>
+          </div>
+          <div class="chart-container"><canvas id="chartContrato"></canvas></div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- LISTADO NOMINAL DE MAESTROS -->
+    <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50">
+        <div>
+          <h2 class="text-base font-bold text-[#003366]" id="tableTitle">Listado Nominal de Maestros (0 registros)</h2>
+          <p class="text-xs text-slate-500">La tabla y gráficos responden al filtro "Tipo de Vista".</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          
+          <!-- BOTÓN ALTERNADOR -->
+          <button id="toggleViewBtn" onclick="toggleViewModeBtn()" class="bg-[#003366] hover:bg-[#002244] text-white text-xs font-bold px-3.5 py-2.5 rounded-lg shadow-sm transition flex items-center gap-1.5">
+            <svg class="w-4 h-4 text-[#FFC000]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+            <span>Ver Dato Único</span>
+          </button>
+
+          <!-- Exportar Excel -->
+          <button onclick="exportVisibleTableToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2.5 rounded-lg shadow-sm transition flex items-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            Exportar a Excel
+          </button>
+
+          <!-- Exportar a PDF -->
+          <button onclick="exportTableToPDF()" class="bg-[#D31145] hover:bg-rose-700 text-white text-xs font-bold px-3.5 py-2.5 rounded-lg shadow-sm transition flex items-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+            Exportar a PDF
+          </button>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto max-h-[480px]">
+        <table class="w-full text-left border-collapse text-xs">
+          <!-- ENCABEZADO DE TABLA AZUL UNAH -->
+          <thead class="bg-[#003366] text-white uppercase sticky top-0 z-10 shadow-sm">
+            <tr>
+              <th class="py-3 px-3">N°</th>
+              <th class="py-3 px-3">N° Empleado</th>
+              <th class="py-3 px-3">Nombre Completo</th>
+              <th class="py-3 px-3">Género</th>
+              <th class="py-3 px-3">Correo Institucional</th>
+              <th class="py-3 px-3">Dirección</th>
+              <th class="py-3 px-3">Centro Universitario</th>
+              <th class="py-3 px-3">Facultad</th>
+              <th class="py-3 px-3">Carrera</th>
+              <th class="py-3 px-3">Departamento</th>
+              <th class="py-3 px-3">Contratación / Jornada</th>
+              <th class="py-3 px-3" id="thAccionFormativa">Acción Formativa</th>
+              <th class="py-3 px-3">Fecha / Duración</th>
+            </tr>
+          </thead>
+          <tbody id="teachersTableBody" class="divide-y divide-slate-200"></tbody>
+        </table>
+      </div>
+
+      <!-- CONTROLES DE PAGINACIÓN -->
+      <div id="paginationControls" class="p-4 border-t border-slate-200 flex justify-between items-center bg-slate-50 text-xs text-slate-600 hidden">
+        <div>
+          Mostrando del <span id="pageStart" class="font-bold text-slate-800"></span> al <span id="pageEnd" class="font-bold text-slate-800"></span> de <span id="pageTotal" class="font-bold text-[#003366]"></span> registros
+        </div>
+        <div class="flex gap-2">
+          <button onclick="prevPage()" id="btnPrevPage" class="px-3 py-1.5 bg-white border border-slate-300 rounded hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition font-bold text-[#003366]">
+            Anterior
+          </button>
+          <button onclick="nextPage()" id="btnNextPage" class="px-3 py-1.5 bg-[#003366] text-white border border-[#003366] rounded hover:bg-[#002244] disabled:opacity-50 disabled:cursor-not-allowed transition font-bold">
+            Siguiente
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // =========================================================================
+    // 1. INICIALIZACIÓN Y VARIABLES GLOBALES
+    // =========================================================================
+    let rawData = [];
+    let charts = {};
+    let currentFilteredData = []; 
+    let currentDisplayData = [];  
+    
+    // Paginación
+    let currentPage = 1;
+    const rowsPerPage = 500;
+
+    const filterConfig = [
+      { id: "filterDireccion", field: "Direccion", label: "Todas las Direcciones" },
+      { id: "filterCentro", field: "Centro_Regional", label: "Todos los Centros" },
+      { id: "filterFacultad", field: "Facultad", label: "Todas las Facultades" },
+      { id: "filterCarrera", field: "Carrera", label: "Todas las Carreras" },
+      { id: "filterDepartamento", field: "Departamento", label: "Todos los Departamentos" },
+      { id: "filterAccion", field: "Nombre_Capacitacion", label: "Todas las Acciones Formativas" },
+      { id: "filterContrato", field: "Tipo_Contratacion", label: "Todas las Contrataciones" },
+      { id: "filterJornada", field: "Jornada", label: "Todas las Jornadas" },
+      { id: "filterGenero", field: "Genero", label: "Todos los Géneros" },
+      { id: "filterFecha", field: "Fecha", label: "Todas las Fechas" }
+    ];
+
+    // =========================================================================
+    // 2. FUNCIONES DE LIMPIEZA ORTOGRÁFICA Y GEOGRÁFICA
+    // =========================================================================
+    function cleanString(val) {
+      if (val === undefined || val === null) return "";
+      return String(val)
+        .replace(/\u00a0/g, " ")
+        .replace(/[¨´`]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function stripAccents(str) {
+      return cleanString(str)
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+    }
+
+    const ACRONYMS_AND_ROMANS = new Set([
+      "UNAH", "CRAED", "ITS", "IPSD", "CED", "DEGT", "VOAE", "DIE", "DICU", "VRA", "SEAPI", "IIES", "CEITEST",
+      "DUA", "IA", "TIC", "TICS", "STEM", "UMINHO", "ICOLEARN", "POA", "PAC",
+      "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XXI"
+    ]);
+
+    const LOWERCASE_CONNECTORS = new Set([
+      "de", "del", "la", "las", "el", "los", "y", "e", "o", "u", "en", "a", "al", "con", "por", "para", "sin", "sobre", "desde"
+    ]);
+
+    const HONDURAS_GEO_REGEX = /\b(unah\s+campus\s+cortes|campus\s+cortes|campus\s+atlantida|unah\s+cortes|unah\s+copan|unah\s+choluteca|unah\s+comayagua|unah\s+olancho|unah\s+yoro|unah\s+el\s+paraiso|unah\s+atlantida|francisco\s+morazan|islas\s+de\s+la\s+bahia|gracias\s+a\s+dios|santa\s+rosa\s+de\s+copan|santa\s+barbara|san\s+pedro\s+sula|distrito\s+central|el\s+paraiso|el\s+progreso|la\s+ceiba|la\s+paz|atlantida|choluteca|comayagua|ocotepeque|siguatepeque|tegucigalpa|intibuca|juticalpa|olancho|lempira|cortes|paraiso|copan|colon|valle|danli|tocoa|ceiba|yoro|tela|curla|curc|curoc|curlp|curva|curon|cu|sps|f\s*m)\b/gi;
+
+    function removeHondurasGeoTerms(str) {
+      let s = cleanString(str);
+      if (!s) return "";
+      let noAccents = stripAccents(s);
+      let strippedTest = noAccents
+        .replace(HONDURAS_GEO_REGEX, " ")
+        .replace(/\b(unah|campus|sede|centro|regional|del|de|en|la|el)\b/gi, " ")
+        .replace(/[^a-zA-Z0-9]/g, "")
+        .trim();
+
+      if (!strippedTest) return ""; 
+
+      return noAccents
+        .replace(HONDURAS_GEO_REGEX, " ")
+        .replace(/\b(unah|campus)\b/gi, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function formatSpanishText(str, fallback = "Sin especificar", isDepartamento = false) {
+      let cleaned = cleanString(str);
+      if (!cleaned) return fallback;
+
+      cleaned = cleaned.replace(/[.,;:\-_/]+$/, "").replace(/^[.,;:\-_/]+/, "").trim();
+
+      if (isDepartamento) {
+        cleaned = cleaned.replace(/^(departamento\s+de\s+la\s+carrera\s+de\s+|departamento\s+de\s+carrera\s+de\s+|departamento\s+de\s+|departarmento\s+de\s+|departamento\s+del\s+|departamento\s+en\s+|departamento\s+|depto\.?\s+de\s+|dep\.?\s+de\s+|depto\.?\s+|dep\.?\s+|carrera\s+de\s+|carrera\s+|escuela\s+de\s+|escuela\s+)/i, "").trim();
+      }
+
+      if (!cleaned) return fallback;
+
+      const words = cleaned.split(" ");
+      return words.map((word, index) => {
+        const match = word.match(/^([(\["'¿¡]*)([^\w\u00C0-\u017F]*?)([\w\u00C0-\u017F.-]+)([)\]"'.,:;?!]*)$/);
+        if (!match) {
+          const low = word.toLowerCase();
+          return low.charAt(0).toUpperCase() + low.slice(1);
+        }
+
+        const prefix = match[1] + match[2];
+        const core = match[3];
+        const suffix = match[4];
+        const upperCore = core.toUpperCase();
+        const lowerCore = core.toLowerCase();
+
+        if (ACRONYMS_AND_ROMANS.has(upperCore)) return prefix + upperCore + suffix;
+        if (index > 0 && LOWERCASE_CONNECTORS.has(lowerCore) && !prefix) return lowerCore + suffix;
+
+        const formattedCore = lowerCore.charAt(0).toUpperCase() + lowerCore.slice(1);
+        return prefix + formattedCore + suffix;
+      }).join(" ");
+    }
+
+    function normalizeAcademicUnit(rawVal, isDepto = true, fallbackCarrera = "") {
+      let s = cleanString(rawVal);
+      if (isDepto && s) {
+        const withoutGeo = removeHondurasGeoTerms(s);
+        if (!withoutGeo) {
+          s = cleanString(fallbackCarrera);
+        } else {
+          s = withoutGeo;
+        }
+      }
+
+      if (!s) return isDepto ? "No especificado" : "Sin especificar";
+
+      const sNoParen = s.replace(/\(.*?\)/g, " ");
+      let k = stripAccents(sNoParen).toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+      k = k.replace(/^(departamento\s+de\s+la\s+carrera\s+de\s+|departamento\s+de\s+carrera\s+de\s+|departamento\s+de\s+|departarmento\s+de\s+|departamento\s+del\s+|departamento\s+en\s+|departamento\s+|depto\s+de\s+|depto\s+|dep\s+de\s+|dep\s+|carrera\s+de\s+|carrera\s+|escuela\s+de\s+|escuela\s+|del\s+)/i, "").trim();
+
+      if (!k) return isDepto ? "No especificado" : "Sin especificar";
+
+      if (k.includes("agropecuaria") && (k.includes("admin") || k.includes("admon"))) return "Administración de Empresas Agropecuarias";
+      if (k.includes("cafetalera")) return isDepto ? "Administración de Empresas" : "Técnico Universitario en Administración de Empresas Cafetaleras";
+      if (k.includes("banca") && k.includes("finanza")) return isDepto ? "Banca y Finanzas" : "Administración en Banca y Finanzas";
+      if (k === "b y f") return "Banca y Finanzas";
+      if (k.includes("aduan")) return "Administración Aduanera";
+      if (/\b(admon|asmon|admistracion|administracuon|administrativo|administracion|aaadministracion)\b/.test(k) || k.includes("empres") || k.includes("emres") || k.includes("enpres") || k.includes("emores") || k === "age") return "Administración de Empresas";
+
+      if (/\b(comercio|conercio|comecio)\b/.test(k) || k === "ci" || k === "internacional") {
+        if (k.includes("agroindustria") && !isDepto) return "Comercio Internacional con Orientación en Agroindustria";
+        return "Comercio Internacional";
+      }
+
+      if (/\b(contaduria|contadura)\b/.test(k)) return "Contaduría Pública y Finanzas";
+      if (/\b(mercadotecnia|mercadltecnia|mercadotecia)\b/.test(k)) return "Mercadotecnia";
+      if (/\b(metodos|metidos)\s+(cuantitativos|cuantutativis|cuantitativo)\b/.test(k)) return "Métodos Cuantitativos";
+      if (/\b(informatica|informatia|infkrmatica)\b/.test(k)) return "Informática Administrativa";
+
+      if (/\b(economia|economoa|economiq)\b/.test(k)) {
+        if (k.includes("agricola")) return "Economía Agrícola";
+        return "Economía";
+      }
+      if (/\b(econo\s*admin)/.test(k)) return "Econoadministrativo";
+      if (/\b(ceac|ciencias\s+economicas)/.test(k)) return "Ciencias Económicas, Administrativas y Contables";
+
+      if (/\b(lenguas|lennguas|leguas)\b/.test(k)) return "Lenguas Extranjeras";
+      if (/\b(area\s+de\s+ingles|area\s+ingles|ingles)\b/.test(k)) return "Área de Inglés";
+      if (/\b(letras)\b/.test(k)) return "Letras";
+
+      if (/\b(psicologia|sicologia|psicologa|ciencias\s+psicologicas)\b/.test(k)) return "Psicología";
+      if (/\b(pedagogia|pedagogis)\b/.test(k)) return "Pedagogía y Ciencias de la Educación";
+      if (/\b(periodismo|periodusmo)\b/.test(k)) return "Periodismo";
+
+      if ((k.includes("arte") || k.includes("humanidades")) && (k.includes("deporte") || k.includes("fisica"))) return "Humanidades, Artes y Deportes";
+      if (/\b(cultura\s+fisica|cultura\s+fiisca|fisica\s+y\s+deporte|deporte|deportes)\b/.test(k)) return "Cultura Física y Deportes";
+      if (/\b(educacion\s+fisica)\b/.test(k)) return isDepto ? "Cultura Física y Deportes" : "Educación Física";
+      if (/\b(humanidades|humanidad)\b/.test(k)) {
+        if (k.includes("sociales") || k.includes("cc")) return "Humanidades y Ciencias Sociales";
+        if (k.includes("arte")) return "Humanidades y Artes";
+        return "Humanidades";
+      }
+
+      if (/\b(ing|ingenieria|ingeneria|ingeniera)\s+civil\b/.test(k) || k === "civil" || k === "ic") return "Ingeniería Civil";
+      if (/\b(ing|ingenieria)\s+(en\s+)?(sistemas|sistemaa)\b/.test(k) || k === "sistemas" || k === "sistemas computacionales" || k === "ingenieria sistemas") return "Ingeniería en Sistemas";
+      if (/\b(ing|ingenieria)\s+electrica\b/.test(k)) return isDepto ? "Ingeniería Eléctrica" : "Ingeniería Eléctrica Industrial";
+      if (/\b(ing|ingenieria)\s+industrial\b/.test(k) || k === "industrial") return "Ingeniería Industrial";
+      if (/\b(ing|ingenieria)\s+mecanica\b/.test(k) || k === "mecanica" || k === "mecanica industrial") return "Ingeniería Mecánica Industrial";
+      if (/\b(ing|ingenieria)\s+quimica\b/.test(k)) return isDepto ? "Ingeniería Química" : "Ingeniería Química Industrial";
+      if (/\b(ing|ingenieria)\s+agricola\b/.test(k)) return "Ingeniería Agrícola";
+      if (/\b(agroindustria|agroindustrial|agroindustra|agroindustrias)\b/.test(k)) return "Ingeniería Agroindustrial";
+      if (k === "ingenieria" || k === "ingeniera") return "Ingeniería";
+
+      if (/\b(acuacultura|acuicultura|acuicola|ciencias\s+acuicolas|dabm)\b/.test(k)) return isDepto ? "Acuicultura y Biología Marina" : "Ingeniería en Ciencias Acuícolas y Recursos Marinos Costeros";
+      if (/\b(bioanalisis|bianalisis)\b/.test(k)) return "Bioanálisis e Inmunología";
+      if (/\b(parasitologia|parasitoligia)\b/.test(k)) return "Parasitología";
+      if (/\b(aeronautica|cienacias\s+aeronauticas)\b/.test(k)) return isDepto ? "Ciencias Aeronáuticas" : "Operaciones Aeronáuticas";
+      if (/\b(informacion\s+geografica|dctig)\b/.test(k)) {
+        if (k.includes("catastrofe") && !isDepto) return "Técnico Universitario en Sistemas de Información Geográfica con Énfasis en Catástrofes";
+        return "Ciencia y Tecnologías de la Información Geográfica";
+      }
+      if (/\b(estadistica)\b/.test(k)) return "Estadística Matemática";
+      if (/\b(matematica|matematicas)\b/.test(k) && !k.includes("fisica")) return "Matemáticas";
+      if (/\b(quimico\s+biologico)\b/.test(k)) return "Químico Biológico y de la Salud";
+      if (/\b(control\s+quimico)\b/.test(k) || k === "control") return "Control Químico Farmacéutico";
+      if (/\b(quimica\s+y\s+farmacia)\b/.test(k)) return "Química y Farmacia";
+      if (/\b(quimica\s+industrial)\b/.test(k)) return "Química Industrial";
+      if (k === "quimica" || k === "qq") return "Química";
+      if (/\b(ecologia|ecologica|eco\s+y\s+rnn)\b/.test(k)) return "Ecología y Recursos Naturales";
+      if (/\b(biologia)\b/.test(k) && !k.includes("celular")) return "Biología";
+      if (/\b(imagenes\s+biomedicas|ciencias\s+biomedicas|dcbi|cdbir)\b/.test(k)) return "Ciencias Biomédicas e Imágenes";
+      if (/\b(odontologia\s+preventiva)\b/.test(k)) return "Odontología Preventiva y Social";
+      if (/\b(enfermeria)\b/.test(k)) return "Enfermería";
+      if (/\b(medicina\s+y\s+cirugia)\b/.test(k)) return isDepto ? "Ciencias Médicas" : "Medicina y Cirugía";
+      if (/\b(rehabilitacion)\b/.test(k)) return "Rehabilitación";
+      if (/\b(salud\s+publica)\b/.test(k)) return "Salud Pública";
+      if (/\b(produccion\s+animal)\b/.test(k)) return "Producción Animal";
+      if (/\b(historia)\b/.test(k) && !k.includes("teoria")) return "Historia";
+      if (/\b(filosofia)\b/.test(k)) return "Filosofía";
+      if (/\b(arte)\b/.test(k) && !k.includes("humanidades") && !k.includes("deporte") && !k.includes("danza")) return "Arte";
+      if (/\b(desarrollo\s+local)\b/.test(k)) return "Desarrollo Local";
+      if (/\b(microbiologia)\b/.test(k)) return "Microbiología";
+      if (/\b(ecoturismo)\b/.test(k)) return "Ecoturismo";
+      if (/\b(nutricion)\b/.test(k)) return "Nutrición";
+
+      if (/\b(trabajo\s+social)\b/.test(k)) return "Trabajo Social";
+      if (/\b(ciencia\s+politica|ciencias\s+politicas)\b/.test(k)) return "Ciencia Política y Derechos Humanos";
+      if (/\b(sociologia)\b/.test(k)) {
+        if (k.includes("derecho")) return "Sociología y Derecho";
+        return "Sociología";
+      }
+      if (/\b(ciencias\s+sociales|ccss|ciencias\s+soc)\b/.test(k) || k === "sociales" || k === "social") return "Ciencias Sociales";
+      if (/\b(derecho\s+privado)\b/.test(k) || k === "privado") return "Derecho Privado";
+      if (/\b(derecho\s+penal)\b/.test(k)) return "Derecho Penal";
+      if (/\b(derecho\s+administrativo)\b/.test(k)) return "Derecho Administrativo";
+      if (/\b(derecho\s+internacional)\b/.test(k)) return "Derecho Internacional";
+      if (k.startsWith("derecho")) return "Derecho";
+      if (/\b(ciencias|cienciaa|ciemciaa)$/.test(k)) return "Ciencias";
+      if (/\b(voae)\b/.test(k)) return "VOAE";
+      if (/\b(iies)\b/.test(k)) return "IIES";
+      if (/\b(ceitest|cei\s+test)\b/.test(k)) return "CEITEST";
+      if (/\b(docencia|docente)\b/.test(k)) return "Docencia";
+
+      return formatSpanishText(s, isDepto ? "No especificado" : "Sin especificar", isDepto);
+    }
+
+    function levenshteinDistance(a, b) {
+      if (a.length < b.length) [a, b] = [b, a];
+      if (b.length === 0) return a.length;
+      let prevRow = Array.from({ length: b.length + 1 }, (_, i) => i);
+      for (let i = 0; i < a.length; i++) {
+        let currRow = [i + 1];
+        for (let j = 0; j < b.length; j++) {
+          const insertions = prevRow[j + 1] + 1;
+          const deletions = currRow[j] + 1;
+          const substitutions = prevRow[j] + (a[i] !== b[j] ? 1 : 0);
+          currRow.push(Math.min(insertions, deletions, substitutions));
+        }
+        prevRow = currRow;
+      }
+      return prevRow[b.length];
+    }
+
+    function getComparisonKey(str, isDepartamento = false) {
+      let s = cleanString(str).toLowerCase();
+      if (isDepartamento) {
+        s = s.replace(/^(departamento\s+de\s+la\s+carrera\s+de\s+|departamento\s+de\s+carrera\s+de\s+|departamento\s+de\s+|departarmento\s+de\s+|departamento\s+del\s+|departamento\s+en\s+|departamento\s+|depto\.?\s+de\s+|dep\.?\s+de\s+|depto\.?\s+|dep\.?\s+|carrera\s+de\s+|carrera\s+|escuela\s+de\s+|escuela\s+)/i, "");
+      }
+      return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+    }
+
+    function countAccents(str) { return (str.match(/[áéíóúÁÉÍÓÚñÑüÜ]/g) || []).length; }
+
+    function unifyCanonicalValues(records) {
+      const fieldsToUnify = [
+        { name: "Departamento", isDepto: true, fuzzy: true },
+        { name: "Carrera", isDepto: false, fuzzy: true },
+        { name: "Facultad", isDepto: false, fuzzy: false },
+        { name: "Centro_Regional", isDepto: false, fuzzy: false },
+        { name: "Direccion", isDepto: false, fuzzy: false },
+        { name: "Tipo_Contratacion", isDepto: false, fuzzy: false },
+        { name: "Jornada", isDepto: false, fuzzy: false },
+        { name: "Nombre_Capacitacion", isDepto: false, fuzzy: false }
+      ];
+
+      fieldsToUnify.forEach(({ name, isDepto, fuzzy }) => {
+        const keyFreq = new Map();
+        const groups = new Map();
+
+        records.forEach(r => {
+          const val = r[name];
+          if (!val) return;
+          const key = getComparisonKey(val, isDepto);
+          if (!key) return;
+
+          keyFreq.set(key, (keyFreq.get(key) || 0) + 1);
+          if (!groups.has(key)) groups.set(key, new Map());
+          const variantsMap = groups.get(key);
+          variantsMap.set(val, (variantsMap.get(val) || 0) + 1);
+        });
+
+        const sortedKeys = Array.from(keyFreq.keys()).sort((a, b) => keyFreq.get(b) - keyFreq.get(a));
+        const clusterMap = new Map();
+        const canonicalClusters = [];
+
+        sortedKeys.forEach(k => {
+          let matched = false;
+          if (fuzzy && k.length >= 7) {
+            for (const canon of canonicalClusters) {
+              if (canon.length >= 7 && Math.abs(k.length - canon.length) <= 2) {
+                const dist = levenshteinDistance(k, canon);
+                const maxLen = Math.max(k.length, canon.length);
+                if (dist <= 2 && (1 - dist / maxLen) >= 0.84) {
+                  clusterMap.set(k, canon);
+                  const targetVariants = groups.get(canon);
+                  groups.get(k).forEach((cnt, form) => {
+                    targetVariants.set(form, (targetVariants.get(form) || 0) + cnt);
+                  });
+                  matched = true;
+                  break;
+                }
+              }
+            }
+          }
+          if (!matched) {
+            canonicalClusters.push(k);
+            clusterMap.set(k, k);
+          }
+        });
+
+        const canonicalLabel = new Map();
+        canonicalClusters.forEach(canonKey => {
+          const variantsMap = groups.get(canonKey);
+          let bestForm = "";
+          let bestScore = -1;
+          variantsMap.forEach((count, form) => {
+            const score = (countAccents(form) > 0 ? 100000 : 0) + count;
+            if (score > bestScore) {
+              bestScore = score;
+              bestForm = form;
+            }
+          });
+          canonicalLabel.set(canonKey, bestForm);
+        });
+
+        records.forEach(r => {
+          const key = getComparisonKey(r[name], isDepto);
+          const targetCluster = clusterMap.get(key);
+          if (targetCluster && canonicalLabel.has(targetCluster)) {
+            r[name] = canonicalLabel.get(targetCluster);
+          }
+        });
+      });
+
+      return records;
+    }
+
+    function mapExcelRowToRecord(row, idx) {
+      const norm = {};
+      Object.keys(row).forEach(k => {
+        const cleanKey = k.replace(/\u00a0/g, " ").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ");
+        norm[cleanKey] = row[k];
+      });
+
+      let empId = cleanString(
+        row["Número de empleado"] || norm["número de empleado"] || norm["Número de empleado"] || norm["numero de empleado"] || norm["n° de empleado"] || norm["n de empleado"] || norm["id_docente"] || norm["codigo de empleado"] || norm["empleado"] || norm["id"] || `REG-${idx + 1}`
+      ).replace(/\.0$/, "");
+
+      let rawFullName = cleanString(
+        norm["nombre completo"] || norm["nombre_docente"] || norm["nombre del docente"] || norm["docente"] || norm["maestro"] || norm["participante"] || ""
+      );
+      if (!rawFullName) {
+        const nombres = cleanString(norm["nombre(s)"] || norm["nombres"] || norm["nombre"] || "");
+        const apellidos = cleanString(norm["apellido(s)"] || norm["apellidos"] || norm["apellido"] || "");
+        rawFullName = `${nombres} ${apellidos}`.trim();
+      }
+      const fullName = rawFullName ? formatSpanishText(rawFullName, "Sin Nombre Registrado") : "Sin Nombre Registrado";
+
+      let rawDir = cleanString(norm["direccion"] || norm["unidad"] || norm["dependencia"] || "");
+      let direccion = "Sin especificar";
+      if (rawDir) {
+        direccion = rawDir.length <= 6 && !rawDir.includes(" ") ? rawDir.toUpperCase() : formatSpanishText(rawDir);
+      }
+
+      let generoRaw = cleanString(norm["genero"] || norm["sexo"] || "Sin especificar");
+      let genero = "Sin especificar";
+      if (generoRaw.toLowerCase().startsWith("fem") || generoRaw.toLowerCase() === "f" || generoRaw.toLowerCase() === "mujer") genero = "Femenino";
+      else if (generoRaw.toLowerCase().startsWith("masc") || generoRaw.toLowerCase() === "m" || generoRaw.toLowerCase() === "hombre") genero = "Masculino";
+      else if (generoRaw) genero = formatSpanishText(generoRaw);
+
+      let contratoRaw = cleanString(norm["tipo de contratacion"] || norm["tipo_contratacion"] || norm["contratacion"] || norm["categoria"] || "");
+      let contrato = contratoRaw ? formatSpanishText(contratoRaw) : "Sin especificar";
+      if (contrato.toLowerCase() === "hora") contrato = "Horario";
+
+      let jornada = formatSpanishText(norm["jornada laboral"] || norm["jornada"] || "", "Sin especificar");
+      let centro = formatSpanishText(norm["centro universitario regional"] || norm["centro_regional"] || norm["centro regional"] || norm["centro"] || "", "Sin especificar");
+      let facultad = formatSpanishText(norm["facultad"] || "", "Sin especificar");
+      let rawCarrera = norm["carrera"] || "";
+      let carrera = normalizeAcademicUnit(rawCarrera, false);
+      let depto = normalizeAcademicUnit(norm["departamento"] || norm["unidad academica"] || "", true, carrera);
+      let accion = formatSpanishText(norm["accion formativa"] || norm["nombre_capacitacion"] || norm["capacitacion"] || norm["curso"] || "", "Capacitación");
+
+      let duracionRaw = cleanString(norm["duracion"] || norm["horas_curso"] || norm["horas"] || "2");
+      let horasNum = parseFloat(duracionRaw.replace(/[^0-9.]/g, ""));
+      if (isNaN(horasNum)) horasNum = 2;
+
+      return {
+        ID_Docente: empId,
+        Nombre_Docente: fullName,
+        Correo: cleanString(norm["correo institucional"] || norm["correo"] || norm["email"] || "-").toLowerCase(),
+        Genero: genero,
+        Tipo_Contratacion: contrato,
+        Jornada: jornada,
+        Experiencia: cleanString(norm["anos de experiencia"] || norm["experiencia"] || "Sin especificar"),
+        Direccion: direccion,
+        Centro_Regional: centro,
+        Facultad: facultad,
+        Carrera: carrera,
+        Departamento: depto,
+        Nombre_Capacitacion: accion,
+        Fecha: cleanString(norm["fecha"] || norm["mes"] || norm["periodo"] || "-"),
+        Horario: cleanString(norm["horario"] || "-"),
+        Horas_Curso: horasNum
+      };
+    }
+
+    // =========================================================================
+    // 3. AGREGADOR DE DATO ÚNICO
+    // =========================================================================
+    function aggregateToUnique(data) {
+      const uniqueMap = new Map();
+      data.forEach(r => {
+        const key = r.ID_Docente || r.Nombre_Docente;
+        if (!uniqueMap.has(key)) {
+          uniqueMap.set(key, { ...r, count: 1, allTalleres: [r.Nombre_Capacitacion] });
+        } else {
+          const item = uniqueMap.get(key);
+          item.Horas_Curso += r.Horas_Curso;
+          item.count += 1;
+          if (!item.allTalleres.includes(r.Nombre_Capacitacion)) item.allTalleres.push(r.Nombre_Capacitacion);
+        }
+      });
+      return Array.from(uniqueMap.values()).map(item => ({
+        ...item,
+        Nombre_Capacitacion: item.allTalleres.join(" | "),
+        Fecha: item.count > 1 ? `Varias Fechas (${item.count} cursos)` : item.Fecha
+      }));
+    }
+
+    // =========================================================================
+    // 4. SISTEMA DE FILTROS EN CASCADA Y VISTAS
+    // =========================================================================
+    function populateCascadeDropdowns() {
+      filterConfig.forEach(target => {
+        const selectEl = document.getElementById(target.id);
+        const currentValue = selectEl.value || "ALL";
+
+        const validRows = rawData.filter(row => {
+          return filterConfig.every(other => {
+            if (other.id === target.id) return true;
+            const otherVal = document.getElementById(other.id).value;
+            return !otherVal || otherVal === "ALL" || String(row[other.field]) === otherVal;
+          });
+        });
+
+        const uniqueValues = [...new Set(validRows.map(r => r[target.field]).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+
+        selectEl.innerHTML = `<option value="ALL">${target.label} (${uniqueValues.length})</option>`;
+        uniqueValues.forEach(val => {
+          const opt = document.createElement("option");
+          opt.value = val;
+          opt.textContent = val;
+          selectEl.appendChild(opt);
+        });
+
+        if (uniqueValues.includes(currentValue)) {
+          selectEl.value = currentValue;
+        } else {
+          selectEl.value = "ALL";
+        }
+      });
+    }
+
+    function onCascadeChange() {
+      populateCascadeDropdowns();
+      updateDashboard();
+    }
+
+    function resetFilters() {
+      filterConfig.forEach(cfg => {
+        const el = document.getElementById(cfg.id);
+        if (el) el.value = "ALL";
+      });
+      document.getElementById("searchInput").value = "";
+      document.getElementById("filterViewMode").value = "general";
+      syncViewModeUI();
+      populateCascadeDropdowns();
+      updateDashboard();
+    }
+
+    function onViewModeChange() {
+      syncViewModeUI();
+      updateDashboard();
+    }
+
+    function toggleViewModeBtn() {
+      const modeEl = document.getElementById("filterViewMode");
+      modeEl.value = modeEl.value === "general" ? "unico" : "general";
+      syncViewModeUI();
+      updateDashboard();
+    }
+
+    function syncViewModeUI() {
+      const mode = document.getElementById("filterViewMode").value;
+      const btn = document.getElementById("toggleViewBtn");
+      
+      const label = mode === "unico" ? "Docentes" : "Participaciones";
+      document.getElementById("titleChart1").innerHTML = `1. Dirección <span class="text-[10px] text-[#FFC000] font-bold ml-1">(${label})</span>`;
+      document.getElementById("titleChart2").innerHTML = `2. Centro Regional <span class="text-[10px] text-[#FFC000] font-bold ml-1">(${label})</span>`;
+      document.getElementById("titleChart3").innerHTML = `3. Facultad <span class="text-[10px] text-[#FFC000] font-bold ml-1">(${label})</span>`;
+      document.getElementById("titleChart4").innerHTML = `4. Carrera <span class="text-[10px] text-[#FFC000] font-bold ml-1">(${label})</span>`;
+      document.getElementById("titleChart5").innerHTML = `5. Departamento <span class="text-[10px] text-[#FFC000] font-bold ml-1">(${label})</span>`;
+      document.getElementById("titleChart6").innerHTML = `6. Tipo de Contratación <span class="text-[10px] text-[#FFC000] font-bold ml-1">(${label})</span>`;
+      document.getElementById("thAccionFormativa").textContent = mode === "unico" ? "Acciones Cursadas" : "Acción Formativa";
+
+      if (mode === "unico") {
+        btn.innerHTML = `<svg class="w-4 h-4 text-[#FFC000]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg> <span class="ml-1">Ver Dato General</span>`;
+      } else {
+        btn.innerHTML = `<svg class="w-4 h-4 text-[#FFC000]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg> <span class="ml-1">Ver Dato Único</span>`;
+      }
+    }
+
+    // =========================================================================
+    // 5. ACTUALIZACIÓN EN TIEMPO REAL DE INDICADORES Y GRÁFICOS
+    // =========================================================================
+    function updateDashboard() {
+      const searchQuery = document.getElementById("searchInput").value.trim().toLowerCase();
+
+      // 1. Filtrar los datos en bruto
+      currentFilteredData = rawData.filter(row => {
+        const passesDropdowns = filterConfig.every(cfg => {
+          const val = document.getElementById(cfg.id).value;
+          return !val || val === "ALL" || String(row[cfg.field]) === val;
+        });
+        if (!passesDropdowns) return false;
+
+        if (!searchQuery) return true;
+        return Object.values(row).some(v => String(v).toLowerCase().includes(searchQuery));
+      });
+
+      // 2. Definir la Data a Mostrar según el Tipo de Vista
+      const isUnique = document.getElementById("filterViewMode").value === "unico";
+      currentDisplayData = isUnique ? aggregateToUnique(currentFilteredData) : [...currentFilteredData];
+      
+      currentPage = 1;
+
+      updateActiveFilterBadge();
+      updateKPIs(currentFilteredData); 
+      renderCharts(currentDisplayData); 
+      renderTable(currentDisplayData, isUnique);
+    }
+
+    function updateActiveFilterBadge() {
+      const activeParts = [];
+      filterConfig.forEach(cfg => {
+        const val = document.getElementById(cfg.id).value;
+        if (val && val !== "ALL") activeParts.push(val);
+      });
+      const badge = document.getElementById("activeFilterBadge");
+      const mode = document.getElementById("filterViewMode").value === "unico" ? "Dato Único" : "Dato General";
+      badge.innerHTML = activeParts.length > 0
+        ? `Vista: <b>${mode}</b> | Filtro: ` + activeParts.join(" → ")
+        : `Vista: <b>${mode}</b> | Mostrando todos los registros cargados`;
+    }
+
+    function updateKPIs(data) {
+      const totalRows = data.length;
+      const uniqueTeachers = new Set(data.map(r => r.ID_Docente || r.Nombre_Docente));
+      const uniqueWorkshops = new Set(data.map(r => r.Nombre_Capacitacion));
+      const uniqueCarreras = new Set(data.map(r => r.Carrera));
+      const totalHours = data.reduce((sum, r) => sum + (Number(r.Horas_Curso) || 0), 0);
+
+      const femRows = data.filter(r => r.Genero === "Femenino");
+      const mascRows = data.filter(r => r.Genero === "Masculino");
+      const femUnique = new Set(femRows.map(r => r.ID_Docente || r.Nombre_Docente));
+      const mascUnique = new Set(mascRows.map(r => r.ID_Docente || r.Nombre_Docente));
+
+      const femPct = totalRows > 0 ? Math.round((femRows.length / totalRows) * 100) : 0;
+      const mascPct = totalRows > 0 ? Math.round((mascRows.length / totalRows) * 100) : 0;
+
+      const avgWorkshops = uniqueTeachers.size > 0 ? (totalRows / uniqueTeachers.size).toFixed(1) : 0;
+      const avgHours = uniqueTeachers.size > 0 ? (totalHours / uniqueTeachers.size).toFixed(1) : 0;
+
+      document.getElementById("kpiParticipaciones").textContent = totalRows.toLocaleString();
+      document.getElementById("kpiUnicos").textContent = uniqueTeachers.size.toLocaleString();
+      document.getElementById("kpiPromedioTalleres").textContent = document.getElementById("filterViewMode").value === "unico" ? "1 doc/fila" : `${avgWorkshops} cap./doc`;
+
+      document.getElementById("kpiFemenino").textContent = femRows.length.toLocaleString();
+      document.getElementById("kpiFemeninoPct").textContent = `${femPct}%`;
+      document.getElementById("kpiFemeninoUnicas").textContent = `${femUnique.size.toLocaleString()} únicas`;
+
+      document.getElementById("kpiMasculino").textContent = mascRows.length.toLocaleString();
+      document.getElementById("kpiMasculinoPct").textContent = `${mascPct}%`;
+      document.getElementById("kpiMasculinoUnicos").textContent = `${mascUnique.size.toLocaleString()} únicos`;
+
+      document.getElementById("kpiTalleres").textContent = uniqueWorkshops.size;
+      document.getElementById("kpiCarrerasCount").textContent = `${uniqueCarreras.size} carreras`;
+      document.getElementById("kpiHoras").textContent = totalHours.toLocaleString();
+      document.getElementById("kpiPromedioHoras").textContent = `${avgHours} h / doc.`;
+    }
+
+    function groupByCount(data, field, maxItems = null) {
+      const counts = {};
+      data.forEach(row => {
+        const key = row[field] || "Sin especificar";
+        counts[key] = (counts[key] || 0) + 1;
+      });
+      let entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+      if (maxItems && entries.length > maxItems) {
+        entries = entries.slice(0, maxItems);
+      }
+      return { labels: entries.map(e => e[0]), values: entries.map(e => e[1]) };
+    }
+
+    function attachClickFilter(chartInstance, selectId) {
+      chartInstance.options.onClick = (evt, elements) => {
+        if (elements.length > 0) {
+          const index = elements[0].index;
+          const selectedLabel = chartInstance.data.labels[index];
+          const selectEl = document.getElementById(selectId);
+          if (selectEl) {
+            selectEl.value = selectEl.value === selectedLabel ? "ALL" : selectedLabel;
+            onCascadeChange();
+          }
+        }
+      };
+    }
+
+    function renderCharts(displayData) {
+      // Paleta de Colores de la UNAH (Azules, Amarillos, Rojos, Grises)
+      const palette = ["#003366", "#FFC000", "#D31145", "#0055A4", "#F2A900", "#4F758B", "#8C8985", "#002855", "#EAAA00", "#144577"];
+      const isUnique = document.getElementById("filterViewMode").value === "unico";
+      const labelText = isUnique ? "Docentes" : "Participaciones";
+
+      const dirGroup = groupByCount(displayData, "Direccion");
+      createOrUpdateChart("chartDireccion", "doughnut", dirGroup.labels, [{
+        data: dirGroup.values, backgroundColor: palette
+      }], "filterDireccion");
+
+      const centroGroup = groupByCount(displayData, "Centro_Regional", 12);
+      createOrUpdateChart("chartCentro", "bar", centroGroup.labels, [{
+        label: labelText, data: centroGroup.values, backgroundColor: "#003366", borderRadius: 4
+      }], "filterCentro", { indexAxis: "y" });
+
+      const facGroup = groupByCount(displayData, "Facultad");
+      createOrUpdateChart("chartFacultad", "bar", facGroup.labels, [{
+        label: labelText, data: facGroup.values, backgroundColor: "#FFC000", borderRadius: 4
+      }], "filterFacultad", { indexAxis: "y" });
+
+      const carGroup = groupByCount(displayData, "Carrera", 12);
+      createOrUpdateChart("chartCarrera", "bar", carGroup.labels, [{
+        label: labelText, data: carGroup.values, backgroundColor: "#0055A4", borderRadius: 4
+      }], "filterCarrera", { indexAxis: "y" });
+
+      const depGroup = groupByCount(displayData, "Departamento", 12);
+      createOrUpdateChart("chartDepartamento", "bar", depGroup.labels, [{
+        label: labelText, data: depGroup.values, backgroundColor: "#4F758B", borderRadius: 4
+      }], "filterDepartamento", { indexAxis: "y" });
+
+      const conGroup = groupByCount(displayData, "Tipo_Contratacion");
+      createOrUpdateChart("chartContrato", "pie", conGroup.labels, [{
+        data: conGroup.values, backgroundColor: palette
+      }], "filterContrato");
+    }
+
+    function createOrUpdateChart(canvasId, type, labels, datasets, filterId, extraOptions = {}) {
+      if (charts[canvasId]) {
+        charts[canvasId].destroy();
+      }
+      const ctx = document.getElementById(canvasId).getContext("2d");
+      const isCircular = type === "doughnut" || type === "pie";
+
+      charts[canvasId] = new Chart(ctx, {
+        type,
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: { duration: 300 },
+          plugins: {
+            legend: { display: isCircular, position: "bottom", labels: { boxWidth: 11, font: { size: 10, family: "Helvetica Neue" } } }
+          },
+          scales: isCircular ? {} : {
+            x: { beginAtZero: true, ticks: { precision: 0, font: { size: 10, family: "Helvetica Neue" } } },
+            y: { ticks: { font: { size: 10, family: "Helvetica Neue" } } }
+          },
+          ...extraOptions
+        }
+      });
+
+      if (filterId) attachClickFilter(charts[canvasId], filterId);
+    }
+
+    // =========================================================================
+    // 6. RENDERIZADO DE LA TABLA DE MAESTROS CON PAGINACIÓN
+    // =========================================================================
+    function renderTable(displayData, isUnique) {
+      const tbody = document.getElementById("teachersTableBody");
+      const titleEl = document.getElementById("tableTitle");
+
+      if (isUnique) {
+        titleEl.textContent = `Listado Nominal (Vista: Dato Único - ${displayData.length.toLocaleString()} docentes)`;
+      } else {
+        const uniqueCount = new Set(displayData.map(r => r.ID_Docente || r.Nombre_Docente)).size;
+        titleEl.textContent = `Listado Nominal (Vista: Dato General - ${displayData.length.toLocaleString()} participaciones de ${uniqueCount.toLocaleString()} docentes)`;
+      }
+
+      if (rawData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="13" class="text-center py-10 text-slate-400 font-medium">Sin datos cargados. Haz clic en "Subir Excel (1 o varios)" en la esquina superior derecha para comenzar.</td></tr>`;
+        document.getElementById("paginationControls")?.classList.add("hidden");
+        return;
+      }
+
+      if (displayData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="13" class="text-center py-8 text-slate-400">No se encontraron docentes con esta combinación de filtros.</td></tr>`;
+        document.getElementById("paginationControls")?.classList.add("hidden");
+        return;
+      }
+
+      // LÓGICA DE PAGINACIÓN
+      const totalItems = displayData.length;
+      const totalPages = Math.ceil(totalItems / rowsPerPage);
+      if (currentPage > totalPages) currentPage = totalPages;
+      if (currentPage < 1) currentPage = 1;
+
+      const startIndex = (currentPage - 1) * rowsPerPage;
+      const endIndex = Math.min(startIndex + rowsPerPage, totalItems);
+      const displayRows = displayData.slice(startIndex, endIndex);
+
+      const pagControls = document.getElementById("paginationControls");
+      if (pagControls) {
+        pagControls.classList.remove("hidden");
+        document.getElementById("pageStart").textContent = (startIndex + 1).toLocaleString();
+        document.getElementById("pageEnd").textContent = endIndex.toLocaleString();
+        document.getElementById("pageTotal").textContent = totalItems.toLocaleString();
+        document.getElementById("btnPrevPage").disabled = currentPage === 1;
+        document.getElementById("btnNextPage").disabled = currentPage === totalPages;
+      }
+
+      tbody.innerHTML = displayRows.map((r, index) => {
+        const globalIndex = startIndex + index + 1; 
+        const genderBadge = r.Genero === "Femenino"
+          ? `<span class="bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full font-semibold">Femenino</span>`
+          : r.Genero === "Masculino"
+          ? `<span class="bg-[#0055A4] text-white px-2 py-0.5 rounded-full font-semibold">Masculino</span>`
+          : `<span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">${r.Genero}</span>`;
+
+        return `
+          <tr class="hover:bg-blue-50/60 transition">
+            <td class="py-2.5 px-3 font-bold text-slate-400">${globalIndex}</td>
+            <td class="py-2.5 px-3 font-mono font-semibold text-slate-600">${r.ID_Docente}</td>
+            <td class="py-2.5 px-3 font-bold text-[#003366]">${r.Nombre_Docente}</td>
+            <td class="py-2.5 px-3">${genderBadge}</td>
+            <td class="py-2.5 px-3 text-slate-500">${r.Correo}</td>
+            <td class="py-2.5 px-3"><span class="bg-blue-50 text-[#003366] font-bold px-2 py-0.5 rounded">${r.Direccion}</span></td>
+            <td class="py-2.5 px-3 text-slate-700">${r.Centro_Regional}</td>
+            <td class="py-2.5 px-3 text-slate-600">${r.Facultad}</td>
+            <td class="py-2.5 px-3 font-semibold text-[#003366]">${r.Carrera}</td>
+            <td class="py-2.5 px-3 text-slate-600">${r.Departamento}</td>
+            <td class="py-2.5 px-3">
+              <span class="bg-slate-100 text-[#003366] px-2 py-0.5 rounded font-medium">${r.Tipo_Contratacion}</span>
+              <span class="block text-[10px] text-slate-400 mt-0.5">${r.Jornada}</span>
+            </td>
+            <td class="py-2.5 px-3 text-slate-700 max-w-xs truncate" title="${r.Nombre_Capacitacion}">${r.Nombre_Capacitacion}</td>
+            <td class="py-2.5 px-3 whitespace-nowrap">
+              <span class="font-semibold text-emerald-700">${r.Horas_Curso}h</span>
+              <span class="block text-[10px] text-slate-400">${r.Fecha}</span>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function prevPage() {
+      if (currentPage > 1) {
+        currentPage--;
+        const isUnique = document.getElementById("filterViewMode").value === "unico";
+        renderTable(currentDisplayData, isUnique);
+      }
+    }
+
+    function nextPage() {
+      const totalPages = Math.ceil(currentDisplayData.length / rowsPerPage);
+      if (currentPage < totalPages) {
+        currentPage++;
+        const isUnique = document.getElementById("filterViewMode").value === "unico";
+        renderTable(currentDisplayData, isUnique);
+      }
+    }
+
+    // =========================================================================
+    // 7. LECTURA DE ARCHIVOS EXCEL (.XLSX / .CSV)
+    // =========================================================================
+    async function processExcelFiles(fileList, append = false) {
+      if (!fileList || fileList.length === 0) return;
+
+      let combinedRows = append ? [...rawData] : [];
+      let filesRead = 0;
+
+      for (const file of fileList) {
+        const arrayBuffer = await file.arrayBuffer();
+        const data = new Uint8Array(arrayBuffer);
+        const workbook = XLSX.read(data, { type: "array" });
+
+        const targetSheetName = workbook.SheetNames.find(
+          n => n.toLowerCase().includes("general") || n.toLowerCase().includes("hoja1") || n.toLowerCase().includes("base")
+        ) || workbook.SheetNames[0];
+
+        const jsonRows = XLSX.utils.sheet_to_json(workbook.Sheets[targetSheetName], { defval: "" });
+        const mapped = jsonRows.map((row, i) => mapExcelRowToRecord(row, combinedRows.length + i));
+        combinedRows = combinedRows.concat(mapped);
+        filesRead++;
+      }
+
+      if (combinedRows.length === 0) {
+        alert("No se encontraron registros válidos en los archivos seleccionados.");
+        return;
+      }
+
+      combinedRows = unifyCanonicalValues(combinedRows);
+
+      const seenExact = new Set();
+      rawData = combinedRows.filter(r => {
+        const uniqueRowSignature = `${r.ID_Docente}|${getComparisonKey(r.Nombre_Capacitacion)}|${r.Fecha}`;
+        if (seenExact.has(uniqueRowSignature)) return false;
+        seenExact.add(uniqueRowSignature);
+        return true;
+      });
+
+      const uniqueTotal = new Set(rawData.map(r => r.ID_Docente || r.Nombre_Docente)).size;
+      document.getElementById("loadedFilesInfo").textContent =
+        `Archivos cargados: ${filesRead} | Participaciones: ${rawData.length.toLocaleString()} | Docentes únicos: ${uniqueTotal.toLocaleString()}`;
+
+      resetFilters();
+    }
+
+    document.getElementById("fileInput").addEventListener("change", function(e) {
+      processExcelFiles(e.target.files, false);
+      e.target.value = "";
+    });
+
+    document.getElementById("appendFileInput").addEventListener("change", function(e) {
+      processExcelFiles(e.target.files, true);
+      e.target.value = "";
+    });
+
+    // =========================================================================
+    // 8. EXPORTACIONES (Exportan la vista actual de forma dinámica)
+    // =========================================================================
+    function exportVisibleTableToExcel() {
+      if (currentDisplayData.length === 0) {
+        alert("No hay datos cargados o en el filtro actual para exportar.");
+        return;
+      }
+
+      const mode = document.getElementById("filterViewMode").value;
+      const isUnique = mode === "unico";
+      
+      const exportList = currentDisplayData.map((r, index) => {
+        const rowData = {
+          "N°": index + 1,
+          "N° Empleado": r.ID_Docente,
+          "Nombre Completo": r.Nombre_Docente,
+          "Género": r.Genero,
+          "Correo Institucional": r.Correo,
+          "Dirección": r.Direccion,
+          "Centro Universitario Regional": r.Centro_Regional,
+          "Facultad": r.Facultad,
+          "Carrera": r.Carrera,
+          "Departamento": r.Departamento,
+          "Tipo de Contratación": r.Tipo_Contratacion,
+          "Jornada Laboral": r.Jornada
+        };
+        
+        if (isUnique) {
+          rowData["Total Capacitaciones"] = r.count || 1;
+          rowData["Acciones Formativas Cursadas"] = r.Nombre_Capacitacion;
+          rowData["Total Horas"] = Number(r.Horas_Curso) || 0;
+        } else {
+          rowData["Acción Formativa"] = r.Nombre_Capacitacion;
+          rowData["Horas"] = Number(r.Horas_Curso) || 0;
+        }
+        
+        rowData["Fecha"] = r.Fecha;
+        return rowData;
+      });
+
+      const ws = XLSX.utils.json_to_sheet(exportList);
+      const wb = XLSX.utils.book_new();
+      
+      // Lógica de nombre dinámico si es un solo maestro
+      const uniqueTeacherIDs = new Set(currentDisplayData.map(r => r.ID_Docente));
+      let sheetName = isUnique ? "Dato_Unico_Docentes" : "Participaciones_Generales";
+      let fileName = isUnique ? "Dato_Unico_Docentes_Capacitados.xlsx" : "Reporte_Participaciones_Docentes.xlsx";
+      
+      if (uniqueTeacherIDs.size === 1) {
+        fileName = `${Array.from(uniqueTeacherIDs)[0]}.xlsx`;
+      }
+      
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+      XLSX.writeFile(wb, fileName);
+    }
+
+    async function exportDashboardAsImage() {
+      const target = document.getElementById("dashboardCaptureArea");
+      const canvas = await html2canvas(target, { scale: 2, backgroundColor: "#f1f5f9" });
+      const link = document.createElement("a");
+      link.download = "Dashboard_Docentes.png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    }
+
+    async function exportDashboardAsPDF() {
+      const { jsPDF } = window.jspdf;
+      const target = document.getElementById("dashboardCaptureArea");
+      const canvas = await html2canvas(target, { scale: 2, backgroundColor: "#f1f5f9" });
+      const imgData = canvas.toDataURL("image/png");
+
+      const pdf = new jsPDF("l", "mm", "a4");
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      pdf.setFontSize(14);
+      pdf.text("Dashboard Docentes - UNAH", 14, 12);
+      pdf.setFontSize(9);
+      pdf.setTextColor(100);
+      const badgeText = document.getElementById("activeFilterBadge").innerText.replace(/\n/g, "");
+      pdf.text(badgeText, 14, 18);
+
+      const imgProps = pdf.getImageProperties(imgData);
+      const maxImgWidth = pageWidth - 28;
+      const maxImgHeight = pageHeight - 28;
+      let renderWidth = maxImgWidth;
+      let renderHeight = (imgProps.height * renderWidth) / imgProps.width;
+
+      if (renderHeight > maxImgHeight) {
+        renderHeight = maxImgHeight;
+        renderWidth = (imgProps.width * renderHeight) / imgProps.height;
+      }
+
+      pdf.addImage(imgData, "PNG", 14, 22, renderWidth, renderHeight);
+      pdf.save("Dashboard_Docentes.pdf");
+    }
+
+    function exportTableToPDF() {
+      if (currentDisplayData.length === 0) {
+        alert("No hay datos en el filtro actual para exportar.");
+        return;
+      }
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF("l", "mm", "a4");
+      const mode = document.getElementById("filterViewMode").value;
+      const isUnique = mode === "unico";
+
+      doc.setFontSize(13);
+      doc.text("Dashboard Docentes UNAH - " + document.getElementById("tableTitle").textContent, 14, 14);
+      doc.setFontSize(9);
+      doc.setTextColor(100);
+      const badgeText = document.getElementById("activeFilterBadge").innerText.replace(/\n/g, "");
+      doc.text(badgeText, 14, 20);
+
+      const rows = currentDisplayData.map((r, index) => {
+        if (isUnique) {
+          return [
+            index + 1,
+            r.ID_Docente,
+            r.Nombre_Docente,
+            r.Genero,
+            r.Direccion,
+            r.Centro_Regional,
+            r.Facultad,
+            r.Carrera,
+            r.Departamento,
+            r.count || 1,
+            r.Nombre_Capacitacion,
+            `${r.Horas_Curso}h`
+          ];
+        } else {
+          return [
+            index + 1,
+            r.ID_Docente,
+            r.Nombre_Docente,
+            r.Genero,
+            r.Direccion,
+            r.Centro_Regional,
+            r.Facultad,
+            r.Carrera,
+            r.Departamento,
+            r.Nombre_Capacitacion,
+            `${r.Horas_Curso}h`
+          ];
+        }
+      });
+
+      const head = isUnique 
+        ? [["N°", "N° Emp.", "Nombre", "Género", "Dir.", "Centro", "Facultad", "Carrera", "Depto", "Cant.", "Cursos", "Horas"]]
+        : [["N°", "N° Emp.", "Nombre", "Género", "Dir.", "Centro", "Facultad", "Carrera", "Depto", "Acción Form.", "Horas"]];
+
+      doc.autoTable({
+        startY: 24,
+        head: head,
+        body: rows,
+        styles: { fontSize: 6.5, cellPadding: 1.5, font: 'helvetica' },
+        headStyles: { fillColor: [0, 51, 102] }, /* Azul Institucional UNAH */
+        columnStyles: {
+          0: { cellWidth: 7 },
+          1: { cellWidth: 15 }
+        }
+      });
+
+      // Lógica de nombre dinámico si es un solo maestro
+      const uniqueTeacherIDs = new Set(currentDisplayData.map(r => r.ID_Docente));
+      let fileName = isUnique ? "Listado_Docentes_Unicos.pdf" : "Listado_Participaciones_Generales.pdf";
+      
+      if (uniqueTeacherIDs.size === 1) {
+        fileName = `${Array.from(uniqueTeacherIDs)[0]}.pdf`;
+      }
+
+      doc.save(fileName);
+    }
+
+    // Inicializar en 0 al abrir
+    window.addEventListener("DOMContentLoaded", () => {
+      syncViewModeUI();
+      populateCascadeDropdowns();
+      updateDashboard();
+    });
+  </script>
+</body>
+</html>
